@@ -1,0 +1,4 @@
+(tests
+ (names testInterp1)
+ (libraries interp1 oUnit)
+ (preprocess (pps ppx_camlrack)))
