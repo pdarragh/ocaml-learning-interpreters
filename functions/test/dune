@@ -1,0 +1,4 @@
+(tests
+ (names testFunctions)
+ (libraries functions oUnit)
+ (preprocess (pps ppx_camlrack)))

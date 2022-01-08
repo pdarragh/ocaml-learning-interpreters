@@ -1,6 +1,6 @@
 (library
- (name interp1)
+ (name functions)
  (libraries camlrack)
- (modules interp1)
+ (modules functions)
  (preprocess
   (pps ppx_camlrack)))

@@ -1,7 +1,8 @@
 open Camlrack
 open Either
-open Interp1
 open OUnit2
+
+open Functions
 
 module type TestInterface = sig
   type input_type

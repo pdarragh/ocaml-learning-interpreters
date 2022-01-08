@@ -1,4 +1,4 @@
-# Interpreter 1
+# Interpreter 1: Functions
 
 This is a simple interpreter with:
 
