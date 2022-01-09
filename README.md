@@ -7,4 +7,5 @@ These are various interpreters implemented using
 
 These are all the interpreters, listed in order of implementation/complexity.
 
-  * [Functions](functions/)
+  * [Functions](interpreters/function.ml)
+  * [Env](interpreters/env.ml)
