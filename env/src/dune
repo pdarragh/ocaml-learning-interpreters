@@ -1,5 +1,5 @@
 (library
- (name functions)
+ (name env)
  (libraries camlrack)
- (modules functions)
+ (modules env)
  (preprocess (pps ppx_camlrack)))

@@ -9,11 +9,24 @@ type exp =
   | Eplus of exp * exp
   | Emult of exp * exp
   | Eapp of symbol * exp
+  | Elet of symbol * exp * exp
 
 type func_defn =
   { name : symbol
   ; arg  : symbol
   ; body : exp }
+
+type binding =
+  { name  : symbol
+  ; value : int }
+
+let bind (n : symbol) (v : int) : binding = { name = n; value = v }
+
+type env = binding list
+
+let mt_env = []
+
+let extend_env = List.cons
 
 let rec get_fundef (n : symbol) (defs : func_defn list) : func_defn =
   match defs with
@@ -23,21 +36,13 @@ let rec get_fundef (n : symbol) (defs : func_defn list) : func_defn =
     then fd
     else get_fundef n defs'
 
-let rec subst (what : exp) (in_place_of : symbol) (within : exp) : exp =
-  match within with
-  | Eint _ -> within
-  | Eid s ->
-    if s = in_place_of
-    then what
-    else within
-  | Eplus (l, r) ->
-    Eplus (subst what in_place_of l,
-           subst what in_place_of r)
-  | Emult (l, r) ->
-    Emult (subst what in_place_of l,
-           subst what in_place_of r)
-  | Eapp (s, arg) ->
-    Eapp (s, subst what in_place_of arg)
+let rec lookup (n : symbol) (env : env) : int =
+  match env with
+  | [] -> failwith "free variable"
+  | b :: env' ->
+    if b.name = n
+    then b.value
+    else lookup n env'
 
 let rec parse (s : sexp) : exp =
   match%spat s with
@@ -52,6 +57,11 @@ let rec parse (s : sexp) : exp =
   | "{SYMBOL ANY}" ->
     Eapp (sexp_to_symbol (first (sexp_to_list s)),
           parse (second (sexp_to_list s)))
+  | "{let {[SYMBOL ANY]} ANY}" ->
+    let bs = sexp_to_list (first (sexp_to_list (second (sexp_to_list s)))) in
+    Elet (sexp_to_symbol (first bs),
+          parse (second bs),
+          parse (third (sexp_to_list s)))
   | _ -> failwith "invalid input"
 
 let parse_fundef (s : sexp) : func_defn =
@@ -62,12 +72,14 @@ let parse_fundef (s : sexp) : func_defn =
     ; body = parse (third (sexp_to_list s)) }
   | _ -> failwith "invalid input"
 
-let rec interp (a : exp) (defs : func_defn list) : int =
+let rec interp (a : exp) (env : env) (defs : func_defn list) : int =
   match a with
   | Eint n -> n
-  | Eid _ -> failwith "free variable"
-  | Eplus (l, r) -> (interp l defs) + (interp r defs)
-  | Emult (l, r) -> (interp l defs) * (interp r defs)
+  | Eid s -> lookup s env
+  | Eplus (l, r) -> (interp l env defs) + (interp r env defs)
+  | Emult (l, r) -> (interp l env defs) * (interp r env defs)
   | Eapp (s, arg) ->
     let fd = get_fundef s defs in
-    interp (subst (Eint (interp arg defs)) fd.arg fd.body) defs
+    interp fd.body (extend_env (bind fd.arg (interp arg env defs)) mt_env) defs
+  | Elet (n, rhs, body) ->
+    interp body (extend_env (bind n (interp rhs env defs)) env) defs
