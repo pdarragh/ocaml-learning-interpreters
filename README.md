@@ -7,7 +7,7 @@ These are various interpreters implemented using
 
 These are all the interpreters, listed in order of implementation/complexity.
 
-  * [Functions](interpreters/src/function.ml)
-      * [Functions tests](interpreters/test/testFunction.ml)
+  * [Functions](interpreters/src/functions.ml)
+      * [Functions tests](interpreters/test/testFunctions.ml)
   * [Env](interpreters/src/env.ml)
       * [Env tests](interpreters/test/testEnv.ml)
