@@ -1,6 +1,6 @@
 (** This module defines (and explains) an interpreter for a simple Boolean
-    algebra consisting of the primitive Boolean values and Boolean
-    conjunctions. **)
+    algebra consisting of the primitive Boolean values, conjunction, negation,
+    and conditional expressions. **)
 
 open Camlrack
 open Camlrack.ListConvenienceFunctions
