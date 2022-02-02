@@ -4,5 +4,6 @@
  (modules functions
           env
           lc
-          bool)
+          bool
+          bool2)
  (preprocess (pps ppx_camlrack)))
