@@ -3,5 +3,6 @@
  (libraries camlrack)
  (modules functions
           env
-          lc)
+          lc
+          bool)
  (preprocess (pps ppx_camlrack)))
