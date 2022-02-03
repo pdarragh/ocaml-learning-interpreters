@@ -77,9 +77,16 @@ let parse (s : string) : exp =
           parse' (fourth (sexp_to_list se)),
           parse' (sixth (sexp_to_list se)))
     | "(ANY SYMBOL ANY)" ->
+      (* We've revised our handling of binary expressions. Instead of writing
+         out a match case for each operator, we're using Camlrack's [SYMBOL]
+         form to match any atomic thing. Then, we check that that symbol
+         actually corresponds to one of our defined operators. *)
       let op = match (sexp_to_symbol (second (sexp_to_list se))) with
         | "and" -> And
         | "or" -> Or
+        (* For this interpreter, we'll raise an exception at this point.
+           However, for more complex languages you may need to be more careful
+           about when this exception gets raised. *)
         | _ -> failwith "parse: invalid operator in input" in
       BinOp (op,
              parse' (first (sexp_to_list se)),

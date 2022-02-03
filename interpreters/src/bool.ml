@@ -59,9 +59,18 @@ type exp =
 let parse (s : string) : exp =
   let rec parse' (se : sexp) : exp =
     match%spat se with
+    (* The [T] and [F] forms can be parsed trivially. *)
     | "T" -> T
     | "F" -> F
+    (* Camlrack provides an [ANY] form that matches any valid S-Expression.
+       The below is interpreted to mean "match any S-Expression that contains
+       three things: an S-Expression, the literal symbol 'and', and another
+       S-Expression". *)
     | "(ANY and ANY)" ->
+      (* Although not the most efficient, the typical way to use a parser like
+         Camlrack is to convert our S-Expression to a list, then select elements
+         from it and recursively parse those. For our needs, this is more than
+         fast enough! *)
       And (parse' (first (sexp_to_list se)),
            parse' (third (sexp_to_list se)))
     | "(not ANY)" ->
@@ -70,6 +79,9 @@ let parse (s : string) : exp =
       If (parse' (second (sexp_to_list se)),
           parse' (fourth (sexp_to_list se)),
           parse' (sixth (sexp_to_list se)))
+    (* Whenever we find an input we weren't expecting, we just raise an
+       exception. A good tip is to write the name of the function that throws
+       the error in the exception's message. *)
     | _ -> failwith "parse: invalid input"
   in
   (* Here, we use Camlrack to convert the string to an S-expression ([sexp]).
