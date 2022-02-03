@@ -116,53 +116,53 @@ let rec string_of_exp (a : exp) : string =
    traditional operator we use for indicating the small-step reduction relation
    is written as a right-pointing arrow with a thin tail [->].)
 
-                        e1 -> e1'
-               ---------------------------              E-AndLeft
-               (e1 and e2) -> (e1' and e2)
+                          e1 -> e1'
+                 ---------------------------              E-AndLeft
+                 (e1 and e2) -> (e1' and e2)
 
-                         e -> e'
-                 -----------------------                E-AndRight
-                 (b and e) -> (b and e')
+                           e -> e'
+                   -----------------------                E-AndRight
+                   (b and e) -> (b and e')
 
-                     --------------                     E-AndTrueTrue
-                     (T and T) -> T
+                       --------------                     E-AndTrueTrue
+                       (T and T) -> T
 
-                     --------------                     E-AndTrueFalse
-                     (T and F) -> F
+                       --------------                     E-AndTrueFalse
+                       (T and F) -> F
 
-                     --------------                     E-AndFalseTrue
-                     (F and T) -> F
+                       --------------                     E-AndFalseTrue
+                       (F and T) -> F
 
-                     --------------                     E-AndFalseFalse
-                     (F and F) -> F
+                       --------------                     E-AndFalseFalse
+                       (F and F) -> F
 
-                         e -> e'
-                   -------------------                  E-NotStep
-                   (not e) -> (not e')
+                           e -> e'
+                     -------------------                  E-NotStep
+                     (not e) -> (not e')
 
-                      ------------                      E-NotTrue
-                      (not T) -> F
+                        ------------                      E-NotTrue
+                        (not T) -> F
 
-                      ------------                      E-NotFalse
-                      (not F) -> T
+                        ------------                      E-NotFalse
+                        (not F) -> T
 
-                        e1 -> e1'
-   ---------------------------------------------------  E-IfCond
-   (if e1 then e2 else e3) -> (if e1' then e2 else e3)
+                          e1 -> e1'
+     ---------------------------------------------------  E-IfCond
+     (if e1 then e2 else e3) -> (if e1' then e2 else e3)
 
-                        e1 -> e1'
-    -------------------------------------------------   E-IfThen
-    (if b then e1 else e2) -> (if b then e1' else e2)
+                          e1 -> e1'
+      -------------------------------------------------   E-IfThen
+      (if b then e1 else e2) -> (if b then e1' else e2)
 
-                         e -> e'
-    -------------------------------------------------   E-IfElse
-    (if b1 then b2 else e) -> (if b1 then b2 else e')
+                           e -> e'
+      -------------------------------------------------   E-IfElse
+      (if b1 then b2 else e) -> (if b1 then b2 else e')
 
-             ----------------------------               E-IfTrue
-             (if T then b1 else b2) -> b1
+               ----------------------------               E-IfTrue
+               (if T then b1 else b2) -> b1
 
-             ----------------------------               E-IfFalse
-             (if F then b1 else b2) -> b2
+               ----------------------------               E-IfFalse
+               (if F then b1 else b2) -> b2
 
    Whew, that's a lot of rules!
 

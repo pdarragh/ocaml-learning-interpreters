@@ -149,21 +149,21 @@ let rec string_of_exp (a : exp) : string =
    [bool.ml], except to remove all of the [and]-related rules. Instead, we will
    define just four new rules to replace them AND handle [or] at the same time:
 
-           e1 -> e1'
-   -------------------------   E-OpLeft
-   (e1 op e2) -> (e1' op e2)
+             e1 -> e1'
+     -------------------------   E-OpLeft
+     (e1 op e2) -> (e1' op e2)
 
-            e -> e'
-     ---------------------     E-OpRight
-     (b op e) -> (b op e')
+              e -> e'
+       ---------------------     E-OpRight
+       (b op e) -> (b op e')
 
-   ⟪ b3 ⟫ = ⟪ b1 ⟫ && ⟪ b2 ⟫
-   --------------------------  E-And
-       (b1 and b2) -> b3
+     ⟪ b3 ⟫ = ⟪ b1 ⟫ && ⟪ b2 ⟫
+     --------------------------  E-And
+         (b1 and b2) -> b3
 
-   ⟪ b3 ⟫ = ⟪ b1 ⟫ || ⟪ b2 ⟫
-   --------------------------  E-Or
-        (b1 or b2) -> b3
+     ⟪ b3 ⟫ = ⟪ b1 ⟫ || ⟪ b2 ⟫
+     --------------------------  E-Or
+          (b1 or b2) -> b3
 
    In this operational semantics, we "inject" our syntactic terms into the
    metalangauge using the ⟪ ⟫ notation. For Boolean values, this means we
@@ -248,6 +248,7 @@ let rec step (a : exp) : exp =
   | BinOp (op, e1, e2) ->       (* E-OpLeft *)
     let e1' = step e1 in
     BinOp (op, e1', e2)
+  (* As before, in any other case we just don't take a step. *)
   | _ -> a
 
 (* And, again, we will define a [multistep] function to help us take multiple
