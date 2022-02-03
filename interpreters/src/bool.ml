@@ -54,7 +54,8 @@ type exp =
    (If you're familiar with parsing at all, you know that usually there is a
    "tokenization" step. That's what we're using the S-expressions for!) *)
 
-(** Parses a string to an [exp], if possible. Raises an exception on failure. *)
+(** Parses a [string] to an [exp], if possible. Raises an exception on
+    failure. *)
 let parse (s : string) : exp =
   let rec parse' (se : sexp) : exp =
     match%spat se with
@@ -278,8 +279,8 @@ let rec multistep (k : int) (a : exp) : exp =
 
 (** This module provides some test functions for the above interpreter. If you
     have the parent module open in utop, you can do [Tests.run_tests ();;] to
-    execute all the tests. If all tests are successful, you will get back a list
-    of unit values. If any test fails, an assertion error will be raised. *)
+    execute all the tests. If all tests are successful, you will get back the
+    unit value. If any test fails, an assertion error will be raised. *)
 module Tests = struct
   type test = (string * exp)
 
@@ -290,8 +291,10 @@ module Tests = struct
     ; ("((not (if T then F else (T and T))) and (not F))", T)
     ]
 
-  let run_test ((input, result) : test) : unit =
-    assert ((multistep 5 (parse input)) = result)
+  let max_steps = 5
 
-  let run_tests () = List.map run_test tests
+  let run_test ((input, result) : test) : unit =
+    assert ((multistep max_steps (parse input)) = result)
+
+  let run_tests () = List.iter run_test tests
 end
