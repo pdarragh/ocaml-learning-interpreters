@@ -1,33 +1,37 @@
 (** This module defines and explains an interpreter for an extended Boolean
-     algebra consisting of primitive Boolean values, conjunctions, and
-     disjunctions. *)
+    algebra consisting of primitive Boolean values, conjunctions, and
+    disjunctions. **)
 
 open Camlrack
 open Camlrack.ListConvenienceFunctions
 
 (* Let's take the same Boolean algebra language from [bool.ml] and add one new
-   functionality: the Boolean disjunction operator, [or]. One possible BNF for
-   this language looks like this:
+   functionality: the Boolean disjunction operator, [or]. Our BNF grammar for
+   this extended language looks like this:
 
-     v ::= T | F
+     b ::= T | F
 
-     e ::= v
-        |  (and e e)
-        |  (or e e)
+     e ::= b
+        |  (e and e)
+        |  (e or e)
+        |  (not e)
+        |  (if e then e else e)
 
    Almost identical to what we had previously, except we've added the [or] form!
    However, we could imagine going on to later add other binary Boolean
    operators (such as [nand], [xor], etc.). Things could get a bit tedious that
    way, so let's instead define our language's syntax a bit differently:
 
-     v ::= T | F
+     b ::= T | F
 
-     op ::= and | or
+     binop ::= and | or
 
-     e ::= v
-        |  (op e e)
+     e ::= b
+        |  (not e)
+        |  (if e then e else e)
+        |  (e binop e)
 
-   Now we've defined an [op] metavariable. Using this, we can express all
+   Now we've defined a [binop] metavariable. Using this, we can express all
    possible binary Boolean operators with a single [e] form. This will come in
    handy later!
 
@@ -37,25 +41,27 @@ open Camlrack.ListConvenienceFunctions
    guide you in this regard based on our experiences, so don't feel bad if this
    seems unintuitive or strange at first!)
 
-   Now, when we implement our expression form, we will do something a little bit
-   different than last time... *)
+   Now we have to implement our expressions in OCaml. We will imitate the above
+   construction of the language (i.e., separation the binary operators from the
+   other forms) in our type. *)
 
 (** The type of expressions for our extended Boolean algebra. *)
 type exp =
-  (* These are the same primitive constructors we had previously. *)
-  | T | F
-  (* But now we've added a constructor for binary operators, which relies on a
-     new [op] type. *)
-  | BinOp of op * exp * exp
-(** The type of operators. *)
-and op =
+  (* These are the same constructors we had previously, minus [and]. *)
+  | T | F | Not of exp | If of exp * exp * exp
+  (* Now we add a constructor for binary operators, which relies on a new
+     [binop] type. *)
+  | BinOp of binop * exp * exp
+
+(** The type of binary operators. *)
+and binop =
   (* We provide one argument-less constructor for each operator. *)
   | And | Or
   (* You can imagine if we wanted to define additional binary Boolean operators,
      we would only need to extend this part of the type! *)
 
 (* Next, we'll extend our parser. Even though we've changed things around a bit,
-   the parsing step is pretty straightforward! *)
+   the parsing step remains pretty straightforward! *)
 
 (** Parses a [string] to an [exp], if possible. Raises an exception on
     failure. *)
@@ -64,13 +70,19 @@ let parse (s : string) : exp =
     match%spat se with
     | "T" -> T
     | "F" -> F
-    | "(and ANY ANY)" ->
-      BinOp (And,
-             parse' (second (sexp_to_list se)),
-             parse' (third (sexp_to_list se)))
-    | "(or ANY ANY)" ->
-      BinOp (Or,
-             parse' (second (sexp_to_list se)),
+    | "(not ANY)" ->
+      Not (parse' (second (sexp_to_list se)))
+    | "(if ANY then ANY else ANY)" ->
+      If (parse' (second (sexp_to_list se)),
+          parse' (fourth (sexp_to_list se)),
+          parse' (sixth (sexp_to_list se)))
+    | "(ANY SYMBOL ANY)" ->
+      let op = match (sexp_to_symbol (second (sexp_to_list se))) with
+        | "and" -> And
+        | "or" -> Or
+        | _ -> failwith "parse: invalid operator in input" in
+      BinOp (op,
+             parse' (first (sexp_to_list se)),
              parse' (third (sexp_to_list se)))
     | _ -> failwith "parse: invalid input"
   in
@@ -80,14 +92,18 @@ let parse (s : string) : exp =
 
 (** Converts an [exp] into a [string]. *)
 let rec string_of_exp (a : exp) : string =
-  let string_of_op (o : op) : string =
-    match o with
+  let string_of_op (op : binop) : string =
+    match op with
     | And -> "and"
     | Or -> "or"
   in
   match a with
   | T -> "T"
   | F -> "F"
+  | Not e -> "(not " ^ string_of_exp e ^ ")"
+  | If (cond, thn, els) -> "(if " ^ string_of_exp cond ^
+                           " then " ^ string_of_exp thn ^
+                           " else " ^ string_of_exp els ^ ")"
   | BinOp (o, l, r) -> "(" ^ string_of_op o ^
                        " " ^ string_of_exp l ^
                        " " ^ string_of_exp r ^ ")"
@@ -96,46 +112,65 @@ let rec string_of_exp (a : exp) : string =
    our language.
 
    In our previous iteration, we defined the Boolean conjunction operator [and]
-   manually. This required five separate semantic rules to handle correctly. If
+   manually. This required six separate semantic rules to handle correctly. If
    we used the same strategy to implement our disjunction operator [or], it
-   would require another five rules! I don't think we want to go through all
-   that effort if there is an easier way.
+   would require another six rules! I don't think we want to go through all that
+   effort if there is an easier way.
 
    In cases like this, we can refer to a [metalanguage]. A metalanguage is
-   another language that we assume to exist that can help us with certain
-   things. For this example, what we want a metalanguage for is to interpret the
-   results of Boolean conjunction and disjunction. This is a well-known relation
-   for almost anybody in computer science, so it should not be problematic to
-   assume that other computer scientists will understand what we mean!
+   another language that we assume to exist that can help us with some of the
+   details of our semantics. For this example, what we want a metalanguage for
+   is to interpret the results of Boolean conjunction and disjunction. This is a
+   well-known relation that has been defined plenty of other places, so it
+   should not be problematic to assume that other computer scientists will
+   understand what we mean!
 
    We will use a special bracket notation, ⟪ and ⟫, to indicate when a syntactic
-   term from our language should be converted into our metalanguage, which for
-   this exercise will be OCaml. Our operational semantics will now look like
-   this:
+   term from our language should be converted into the metalanguage. (It is more
+   common to use blackboard-bold square brackets, ⟦⟧, but when using a monospace
+   font I find the ⟪⟫ to be easier to distinguish.) To do this, we need to
+   define precisely what the conversion does:
+
+     ⟪ T ⟫ = true
+     ⟪ F ⟫ = false
+
+   In actuality, the ⟪ • ⟫ forms make what is called a [metafunction]. The
+   special bracket notation represents a function that relates things from our
+   syntax to things in the mathematical world where Boolean values exist.
+
+   We will assume to keep all of the rules from the semantics written in
+   [bool.ml], except to remove all of the [and]-related rules. Instead, we will
+   define just four new rules to replace them AND handle [or] at the same time:
 
            e1 -> e1'
-   -------------------------  E-OpLeft
-   (op e1 e2) -> (op e1' e2)
+   -------------------------   E-OpLeft
+   (e1 op e2) -> (e1' op e2)
 
             e -> e'
      ---------------------     E-OpRight
-     (op v e) -> (op v e')
+     (b op e) -> (b op e')
 
-   ⟪ v3 ⟫ = ⟪ v1 ⟫ && ⟪ v2 ⟫
+   ⟪ b3 ⟫ = ⟪ b1 ⟫ && ⟪ b2 ⟫
    --------------------------  E-And
-       (and v1 v2) -> v3
+       (b1 and b2) -> b3
 
-   ⟪ v3 ⟫ = ⟪ v1 ⟫ || ⟪ v2 ⟫
+   ⟪ b3 ⟫ = ⟪ b1 ⟫ || ⟪ b2 ⟫
    --------------------------  E-Or
-        (or v1 v2) -> v3
+        (b1 or b2) -> b3
 
-   In this versino of our operational semantics, we are relying on the existence
-   of the [&&] and [||] operators to do our dirty work. We "inject" our
-   syntactic terms into the metalangauge (OCaml) using the ⟪ ⟫ notation.
+   In this operational semantics, we "inject" our syntactic terms into the
+   metalangauge using the ⟪ ⟫ notation. For Boolean values, this means we
+   convert our syntactic [T] and [F] into mathematical [true] and [false], then
+   rely on the existence of conjunction [&&] and disjunction [||] operators that
+   work on those [true] and [false] values. Since these relations are
+   well-known, it is reasonable to assume that we do not need to explicitly
+   re-implement them in pure operational semantics rules as we did in [bool.ml].
 
-   To use this technique, we're going to need a function to convert from
-   syntactic values to OCaml, then a function to convert back from OCaml to our
-   syntactic values.*)
+   To use this technique in our interpreter implementation, we're going to need
+   a function to convert from syntactic Boolean values to OCaml, then a function
+   to convert back from OCaml to our syntactic Boolean values. Note that we will
+   only permit the conversion of Boolean values from [b]; we will not convert
+   all expressions from [e]. *)
 
 (** Converts an [exp] to an OCaml [bool]. *)
 let ocaml_bool_of_exp (a : exp) : bool =
@@ -150,25 +185,52 @@ let exp_of_ocaml_bool (b : bool) : exp =
   | true -> T
   | false -> F
 
-(* Next, we will copy our [is_value] function from the previous implementation.
-   This will come in handy when we get to the [step] function. *)
+(* Next, we will copy our [is_value] function from [bool.ml]. *)
 
-(** Determines whether an expression [a] is actually a value. *)
+(** Determines whether an expression [a] is actually a Boolean value. *)
 let is_value (a : exp) : bool =
   match a with
   | T | F -> true
   | _ -> false
 
-(* And now, we can implement the [step] function. *)
+(* And now, we can implement the revised [step] function. (There is a nested
+   helper function at the top of the [step] definition, then all our new rules
+   are implemented at the bottom.) *)
 
 (** Takes a single step according to the small-step operational semantics. *)
 let rec step (a : exp) : exp =
-  let get_op (o : op) : (bool -> bool -> bool) =
-    match o with
+  (** Converts a syntactic binary operator into an OCaml function. *)
+  let get_op (op : binop) : (bool -> bool -> bool) =
+    match op with
     | And -> (&&)
     | Or -> (||)
   in
   match a with
+  (* Reducing [not]. *)
+  | Not T -> F                  (* E-NotTrue *)
+  | Not F -> T                  (* E-NotFalse *)
+  | Not e ->                    (* E-NotStep *)
+    let e' = step e in
+    Not e'
+  (* Reducing [if]. *)
+  | If (T, b1, b2)              (* E-IfTrue *)
+    when is_value b1 && is_value b2 ->
+    b1
+  | If (F, b1, b2)              (* E-IfFalse *)
+    when is_value b1 && is_value b2 ->
+    b2
+  | If (b1, b2, e)              (* E-IfElse *)
+    when is_value b1 && is_value b2 ->
+    let e' = step e in
+    If (b1, b2, e')
+  | If (b, e1, e2)              (* E-IfThen *)
+    when is_value b ->
+    let e1' = step e1 in
+    If (b, e1', e2)
+  | If (e1, e2, e3) ->          (* E-IfCond *)
+    let e1' = step e1 in
+    If (e1', e2, e3)
+  (* Reducing binary operations. *)
   | BinOp (op, v1, v2)          (* E-And and E-Or *)
     when is_value v1 && is_value v2 ->
     exp_of_ocaml_bool ((get_op op) (ocaml_bool_of_exp v1) (ocaml_bool_of_exp v2))
@@ -197,3 +259,27 @@ let rec multistep (k : int) (a : exp) : exp =
     | _ ->
       let a' = step a in
       multistep (k - 1) a'
+
+(** This module provides some test functions for the above interpreter. If you
+    have the parent module open in utop, you can do [Tests.run_tests ();;] to
+    execute all the tests. If all tests are successful, you will get back the
+    unit value. If any test fails, an assertion error will be raised. *)
+module Tests = struct
+  type test = (string * exp)
+
+  let tests : test list =
+    [ ("(T and F)", F)
+    ; ("(T and T)", T)
+    ; ("(T or F)", T)
+    ; ("(F or F)", F)
+    ; ("(T or T)", T)
+    ; ("(if (T or F) then (T and T) else (not (F or T)))", T)
+    ]
+
+  let max_steps = 5
+
+  let run_test ((input, result) : test) : unit =
+    assert ((multistep max_steps (parse input)) = result)
+
+  let run_tests () = List.iter run_test tests
+end
